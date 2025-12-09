@@ -158,7 +158,7 @@ class AutoLoopSolver:
         pyautogui.moveTo(center_x, center_y, duration=0.4) # 少しゆっくり動かして精度確認
         time.sleep(0.4)
         pyautogui.click()
-        time.sleep(0.4)
+        time.sleep(1)
 
     def update_ui_text(self, text):
         self.root.after(0, lambda: self.status_label.config(text=text))
