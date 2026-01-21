@@ -2,17 +2,9 @@ import tkinter as tk
 from tkinter import scrolledtext
 import threading
 import mss
-import google.generativeai as genai
 from PIL import Image
 import time
-
-# --- 設定エリア ---
-API_KEY = "AIzaSyAf6kpnHqSyaVdcQJfI5eYrst_qD1LWc64" # ★ここにAPIキーを入れる★
-MODEL_NAME = 'models/gemini-2.5-flash'
-
-# API設定
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel(MODEL_NAME)
+from ollama_utils import call_ollama_vision
 
 class MultiSolverApp:
     def __init__(self, root):
@@ -99,10 +91,9 @@ class MultiSolverApp:
                 """
             
             # AI実行
-            response = model.generate_content([prompt, image])
-            result_text = response.text
+            response_text = call_ollama_vision(prompt, image)
             
-            self.root.after(0, self.update_ui, result_text)
+            self.root.after(0, self.update_ui, response_text)
 
         except Exception as e:
             error_msg = f"エラーが発生しました:\n{e}"

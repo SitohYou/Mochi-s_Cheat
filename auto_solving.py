@@ -1,20 +1,12 @@
 import tkinter as tk
 import threading
 import mss
-import google.generativeai as genai
 from PIL import Image
 import time
 import pyautogui
 import json
 import re
-
-# --- 設定エリア ---
-API_KEY = "AIzaSyAf6kpnHqSyaVdcQJfI5eYrst_qD1LWc64" # ★ここにAPIキーを入れる★
-MODEL_NAME = 'models/gemini-2.5-flash'
-
-# API設定
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel(MODEL_NAME)
+from ollama_utils import call_ollama_vision
 
 # PyAutoGUI設定
 pyautogui.FAILSAFE = True # マウスを画面の四隅に飛ばすと強制停止
@@ -100,10 +92,10 @@ class AutoLoopSolver:
                 box_2dは0-1000の正規化座標。
                 """
                 print("test2")
-                response = model.generate_content([prompt, image])
-                print(response)
+                response_text = call_ollama_vision(prompt, image)
+                print(response_text)
                 # 3. JSON解析と実行
-                json_match = re.search(r'\[.*\]', response.text, re.DOTALL)
+                json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
                 if json_match:
                     actions = json.loads(json_match.group())
                     
