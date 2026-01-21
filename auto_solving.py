@@ -1,20 +1,18 @@
 import tkinter as tk
 import threading
 import mss
-import google.generativeai as genai
 from PIL import Image
 import time
 import pyautogui
 import json
 import re
+import requests
+import base64
+import io
 
 # --- 設定エリア ---
-API_KEY = "AIzaSyAf6kpnHqSyaVdcQJfI5eYrst_qD1LWc64" # ★ここにAPIキーを入れる★
-MODEL_NAME = 'models/gemini-2.5-flash'
-
-# API設定
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel(MODEL_NAME)
+OLLAMA_API_URL = "http://localhost:11434/api/generate"
+MODEL_NAME = 'llama3.2-vision'  # Ollamaのビジョンモデル
 
 # PyAutoGUI設定
 pyautogui.FAILSAFE = True # マウスを画面の四隅に飛ばすと強制停止
@@ -56,6 +54,32 @@ class AutoLoopSolver:
             img = Image.frombytes("RGB", sct_img.size, sct_img.rgb)
             
         return img, monitor
+    
+    def image_to_base64(self, image):
+        """画像をBase64エンコードする"""
+        buffered = io.BytesIO()
+        image.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+        return img_str
+    
+    def call_ollama_vision(self, prompt, image):
+        """Ollama APIを呼び出してビジョンモデルに画像解析を依頼"""
+        img_base64 = self.image_to_base64(image)
+        
+        payload = {
+            "model": MODEL_NAME,
+            "prompt": prompt,
+            "images": [img_base64],
+            "stream": False
+        }
+        
+        try:
+            response = requests.post(OLLAMA_API_URL, json=payload, timeout=60)
+            response.raise_for_status()
+            result = response.json()
+            return result.get("response", "")
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Ollama API呼び出しエラー: {e}")
 
     def start_loop(self):
         self.is_running = True
@@ -100,10 +124,10 @@ class AutoLoopSolver:
                 box_2dは0-1000の正規化座標。
                 """
                 print("test2")
-                response = model.generate_content([prompt, image])
-                print(response)
+                response_text = self.call_ollama_vision(prompt, image)
+                print(response_text)
                 # 3. JSON解析と実行
-                json_match = re.search(r'\[.*\]', response.text, re.DOTALL)
+                json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
                 if json_match:
                     actions = json.loads(json_match.group())
                     

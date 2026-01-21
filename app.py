@@ -2,17 +2,15 @@ import tkinter as tk
 from tkinter import scrolledtext
 import threading
 import mss
-import google.generativeai as genai
 from PIL import Image
 import time
+import requests
+import base64
+import io
 
 # --- 設定エリア ---
-API_KEY = "AIzaSyAf6kpnHqSyaVdcQJfI5eYrst_qD1LWc64" # ★ここにAPIキーを入れる★
-MODEL_NAME = 'models/gemini-2.5-flash'
-
-# API設定
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel(MODEL_NAME)
+OLLAMA_API_URL = "http://localhost:11434/api/generate"
+MODEL_NAME = 'llama3.2-vision'  # Ollamaのビジョンモデル
 
 class MultiSolverApp:
     def __init__(self, root):
@@ -59,6 +57,32 @@ class MultiSolverApp:
         
         self.root.deiconify()
         return img
+    
+    def image_to_base64(self, image):
+        """画像をBase64エンコードする"""
+        buffered = io.BytesIO()
+        image.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+        return img_str
+    
+    def call_ollama_vision(self, prompt, image):
+        """Ollama APIを呼び出してビジョンモデルに画像解析を依頼"""
+        img_base64 = self.image_to_base64(image)
+        
+        payload = {
+            "model": MODEL_NAME,
+            "prompt": prompt,
+            "images": [img_base64],
+            "stream": False
+        }
+        
+        try:
+            response = requests.post(OLLAMA_API_URL, json=payload, timeout=60)
+            response.raise_for_status()
+            result = response.json()
+            return result.get("response", "")
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Ollama API呼び出しエラー: {e}")
 
     def start_solving(self):
         self.solve_btn.config(state='disabled', text="解析中...")
@@ -99,10 +123,9 @@ class MultiSolverApp:
                 """
             
             # AI実行
-            response = model.generate_content([prompt, image])
-            result_text = response.text
+            response_text = self.call_ollama_vision(prompt, image)
             
-            self.root.after(0, self.update_ui, result_text)
+            self.root.after(0, self.update_ui, response_text)
 
         except Exception as e:
             error_msg = f"エラーが発生しました:\n{e}"
